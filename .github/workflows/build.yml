@@ -1,6 +1,6 @@
 name: Build NEON DEAD APK
 
-on:
+"on":
 workflow_dispatch:
 push:
 branches:
@@ -12,10 +12,9 @@ contents: read
 jobs:
 build:
 runs-on: ubuntu-latest
-
 steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+- name: Checkout repository
+uses: actions/checkout@v4
 
   - name: Set up Java
     uses: actions/setup-java@v4
@@ -23,34 +22,28 @@ steps:
       distribution: temurin
       java-version: "17"
 
-  - name: Unpack Android project
-    shell: bash
+  - name: Unpack project
     run: |
       ZIP="$(find . -maxdepth 2 -type f -iname '*.zip' -print -quit)"
       if [ -z "$ZIP" ]; then
-        echo "ERROR: ZIP project not found"
+        echo "ZIP project not found"
         exit 1
       fi
       mkdir -p project
       unzip -o "$ZIP" -d project
-      echo "Project ZIP: $ZIP"
-      find project -maxdepth 4 -type f | head -100
 
-  - name: Locate Gradle wrapper
+  - name: Find Gradle wrapper
     id: locate
     shell: bash
     run: |
       WRAPPER="$(find project -type f -name gradlew -print -quit)"
       if [ -z "$WRAPPER" ]; then
-        echo "ERROR: gradlew not found inside ZIP"
-        echo "The ZIP must contain a complete Android Gradle project."
+        echo "gradlew not found in ZIP"
         exit 1
       fi
-      DIR="$(dirname "$WRAPPER")"
-      echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+      echo "dir=$(dirname "$WRAPPER")" >> "$GITHUB_OUTPUT"
 
-  - name: Build debug APK
-    shell: bash
+  - name: Build APK
     working-directory: ${{ steps.locate.outputs.dir }}
     run: |
       chmod +x gradlew
