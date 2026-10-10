@@ -1,10 +1,10 @@
+name: Build NEON DEAD APK
 
 on:
 workflow_dispatch:
 push:
-paths:
-- "NEON_DEAD_ANDROID_LAUNCHER_PROJECT.zip"
-- ".github/workflows/build.yml"
+branches:
+- main
 
 permissions:
 contents: read
@@ -12,9 +12,10 @@ contents: read
 jobs:
 build:
 runs-on: ubuntu-latest
+
 steps:
-- name: Checkout repository
-uses: actions/checkout@v4
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
   - name: Set up Java
     uses: actions/setup-java@v4
@@ -22,23 +23,34 @@ uses: actions/checkout@v4
       distribution: temurin
       java-version: "17"
 
-  - name: Unpack project
+  - name: Unpack Android project
+    shell: bash
     run: |
-      unzip -o NEON_DEAD_ANDROID_LAUNCHER_PROJECT.zip -d project
-      find project -maxdepth 5 -type f | head -100
+      ZIP="$(find . -maxdepth 2 -type f -iname '*.zip' -print -quit)"
+      if [ -z "$ZIP" ]; then
+        echo "ERROR: ZIP project not found"
+        exit 1
+      fi
+      mkdir -p project
+      unzip -o "$ZIP" -d project
+      echo "Project ZIP: $ZIP"
+      find project -maxdepth 4 -type f | head -100
 
-  - name: Find Gradle project
+  - name: Locate Gradle wrapper
     id: locate
     shell: bash
     run: |
-      DIR=$(find project -type f -name gradlew -print -quit)
-      if [ -z "$DIR" ]; then
-        echo "ERROR: gradlew not found in ZIP"
+      WRAPPER="$(find project -type f -name gradlew -print -quit)"
+      if [ -z "$WRAPPER" ]; then
+        echo "ERROR: gradlew not found inside ZIP"
+        echo "The ZIP must contain a complete Android Gradle project."
         exit 1
       fi
-      echo "dir=$(dirname "$DIR")" >> "$GITHUB_OUTPUT"
+      DIR="$(dirname "$WRAPPER")"
+      echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
-  - name: Build APK
+  - name: Build debug APK
+    shell: bash
     working-directory: ${{ steps.locate.outputs.dir }}
     run: |
       chmod +x gradlew
