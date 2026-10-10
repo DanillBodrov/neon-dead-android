@@ -1,0 +1,53 @@
+name: Build NEON DEAD APK
+
+on:
+workflow_dispatch:
+push:
+paths:
+- "NEON_DEAD_ANDROID_LAUNCHER_PROJECT.zip"
+- ".github/workflows/build.yml"
+
+permissions:
+contents: read
+
+jobs:
+build:
+runs-on: ubuntu-latest
+steps:
+- name: Checkout repository
+uses: actions/checkout@v4
+
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: "17"
+
+  - name: Unpack project
+    run: |
+      unzip -o NEON_DEAD_ANDROID_LAUNCHER_PROJECT.zip -d project
+      find project -maxdepth 5 -type f | head -100
+
+  - name: Find Gradle project
+    id: locate
+    shell: bash
+    run: |
+      DIR=$(find project -type f -name gradlew -print -quit)
+      if [ -z "$DIR" ]; then
+        echo "ERROR: gradlew not found in ZIP"
+        exit 1
+      fi
+      echo "dir=$(dirname "$DIR")" >> "$GITHUB_OUTPUT"
+
+  - name: Build APK
+    working-directory: ${{ steps.locate.outputs.dir }}
+    run: |
+      chmod +x gradlew
+      ./gradlew assembleDebug
+
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: NEON-DEAD-APK
+      path: project/**/build/outputs/apk/debug/*.apk
+      if-no-files-found: error
