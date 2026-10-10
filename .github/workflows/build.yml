@@ -1,63 +1,59 @@
 name: Build NEON DEAD APK
 
 "on":
-workflow_dispatch:
-push:
-branches:
-- main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
-contents: read
+  contents: read
 
 jobs:
-build:
-runs-on: ubuntu-latest
-steps:
-- name: Checkout repository
-uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Set up Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: "17"
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
-  - name: Unpack Android project
-    shell: bash
-    run: |
-      set -e
-      ZIP="$(find . -maxdepth 2 -type f -iname '*.zip' -print -quit)"
-      if [ -z "$ZIP" ]; then
-        echo "ERROR: ZIP file not found in repository"
-        exit 1
-      fi
-      mkdir -p project
-      unzip -o "$ZIP" -d project
-      echo "ZIP extracted successfully"
+      - name: Unpack project
+        shell: bash
+        run: |
+          set -e
+          ZIP="$(find . -maxdepth 2 -type f -iname '*.zip' -print -quit)"
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: ZIP file not found"
+            exit 1
+          fi
+          mkdir -p project
+          unzip -o "$ZIP" -d project
 
-  - name: Locate Gradle wrapper
-    id: locate
-    shell: bash
-    run: |
-      WRAPPER="$(find project -type f -name gradlew -print -quit)"
-      if [ -z "$WRAPPER" ]; then
-        echo "ERROR: gradlew not found inside ZIP"
-        echo "The ZIP must contain a complete Android Gradle project."
-        exit 1
-      fi
-      DIR="$(dirname "$WRAPPER")"
-      echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+      - name: Find Gradle wrapper
+        id: locate
+        shell: bash
+        run: |
+          WRAPPER="$(find project -type f -name gradlew -print -quit)"
+          if [ -z "$WRAPPER" ]; then
+            echo "ERROR: gradlew not found in ZIP"
+            exit 1
+          fi
+          echo "dir=$(dirname "$WRAPPER")" >> "$GITHUB_OUTPUT"
 
-  - name: Build debug APK
-    working-directory: ${{ steps.locate.outputs.dir }}
-    shell: bash
-    run: |
-      chmod +x ./gradlew
-      ./gradlew assembleDebug
+      - name: Build APK
+        working-directory: ${{ steps.locate.outputs.dir }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-  - name: Upload APK artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: NEON-DEAD-APK
-      path: project/**/build/outputs/apk/debug/*.apk
-      if-no-files-found: error
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEON-DEAD-APK
+          path: project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
