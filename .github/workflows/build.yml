@@ -22,34 +22,40 @@ uses: actions/checkout@v4
       distribution: temurin
       java-version: "17"
 
-  - name: Unpack project
+  - name: Unpack Android project
+    shell: bash
     run: |
+      set -e
       ZIP="$(find . -maxdepth 2 -type f -iname '*.zip' -print -quit)"
       if [ -z "$ZIP" ]; then
-        echo "ZIP project not found"
+        echo "ERROR: ZIP file not found in repository"
         exit 1
       fi
       mkdir -p project
       unzip -o "$ZIP" -d project
+      echo "ZIP extracted successfully"
 
-  - name: Find Gradle wrapper
+  - name: Locate Gradle wrapper
     id: locate
     shell: bash
     run: |
       WRAPPER="$(find project -type f -name gradlew -print -quit)"
       if [ -z "$WRAPPER" ]; then
-        echo "gradlew not found in ZIP"
+        echo "ERROR: gradlew not found inside ZIP"
+        echo "The ZIP must contain a complete Android Gradle project."
         exit 1
       fi
-      echo "dir=$(dirname "$WRAPPER")" >> "$GITHUB_OUTPUT"
+      DIR="$(dirname "$WRAPPER")"
+      echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
-  - name: Build APK
+  - name: Build debug APK
     working-directory: ${{ steps.locate.outputs.dir }}
+    shell: bash
     run: |
-      chmod +x gradlew
+      chmod +x ./gradlew
       ./gradlew assembleDebug
 
-  - name: Upload APK
+  - name: Upload APK artifact
     uses: actions/upload-artifact@v4
     with:
       name: NEON-DEAD-APK
